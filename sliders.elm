@@ -1,6 +1,5 @@
 module Sliders where
 
-import Debug
 import Signal
 import Html exposing (..)
 import List exposing (..)
@@ -127,7 +126,6 @@ spawnSquare model =
         (spawnIndex, seed') = Random.generate (Random.int 0 numEmptySquares) model.seed
         spawnLoc = withDefault Nothing (get spawnIndex emptyLocs)
         (spawnVal, seed'') = makeSpawnValue seed'
-        temp = Debug.watch "" (emptyLocs, spawnLoc)
     in case spawnLoc of
         Nothing -> { model | seed <- seed' }
         Just (row, col) ->
