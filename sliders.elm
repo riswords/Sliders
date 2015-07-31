@@ -65,12 +65,15 @@ update : Keys -> Model -> Model
 update keys model = handleAction (parseAction keys) model
 
 handleAction : Action -> Model -> Model
-handleAction action model = spawnSquare <|
+handleAction action model =
     case action of
         SlideRight -> 
-            
+            spawnSquare <| { model | 
+                grid <- map slideRight model.grid
+            }
+
         SlideLeft -> 
-            { model | 
+            spawnSquare <| { model | 
                 grid <- 
                     rotateCW model.grid |>
                     rotateCW |>
@@ -78,8 +81,9 @@ handleAction action model = spawnSquare <|
                     rotateCW |>
                     rotateCW
             }
+
         SlideUp -> 
-            { model | 
+            spawnSquare <| { model | 
                 grid <- 
                     rotateCW model.grid |>
                     map slideRight |>
@@ -87,8 +91,9 @@ handleAction action model = spawnSquare <|
                     rotateCW |> 
                     rotateCW
             }
-        SlideDown -> 
-            { model | 
+
+        SlideDown ->
+            spawnSquare <| { model | 
                 grid <- 
                     rotateCW model.grid |>
                     rotateCW |>
@@ -96,13 +101,9 @@ handleAction action model = spawnSquare <|
                     map slideRight |>
                     rotateCW
             }
+        
         None -> model
 
-slideModelRight : Model -> Model
-slideModelRight model = 
-    { model | 
-        grid <- map slideRight model.grid
-    }
 
 spawnSquare : Model -> Model
 spawnSquare model =
