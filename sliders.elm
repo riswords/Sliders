@@ -1,5 +1,6 @@
 module Sliders where
 
+import Debug
 import Signal
 import Html exposing (..)
 import List exposing (..)
@@ -65,44 +66,37 @@ update keys model = handleAction (parseAction keys) model
 
 handleAction : Action -> Model -> Model
 handleAction action model =
-    case action of
-        SlideRight -> 
-            spawnSquare <| { model | 
-                grid <- map slideRight model.grid
-            }
-
-        SlideLeft -> 
-            spawnSquare <| { model | 
-                grid <- 
-                    rotateCW model.grid |>
-                    rotateCW |>
-                    map slideRight |>
-                    rotateCW |>
-                    rotateCW
-            }
-
-        SlideUp -> 
-            spawnSquare <| { model | 
-                grid <- 
-                    rotateCW model.grid |>
-                    map slideRight |>
-                    rotateCW |>
-                    rotateCW |> 
-                    rotateCW
-            }
-
-        SlideDown ->
-            spawnSquare <| { model | 
-                grid <- 
-                    rotateCW model.grid |>
-                    rotateCW |>
-                    rotateCW |>
-                    map slideRight |>
-                    rotateCW
-            }
-        
-        None -> model
-
+    let firstRotation = 
+            case action of
+                SlideRight -> model.grid
+                SlideLeft -> rotateCW model.grid |>
+                            rotateCW
+                SlideUp -> rotateCW model.grid
+                SlideDown -> rotateCW model.grid |>
+                            rotateCW |>
+                            rotateCW
+                None -> model.grid
+        slidGridResults = map slideRight firstRotation
+        didSlide =
+            case action of 
+                None -> False
+                _ -> any fst slidGridResults
+        repaddedGrid = map snd slidGridResults
+        secondRotation = 
+            case action of
+                SlideRight -> repaddedGrid
+                SlideLeft -> rotateCW repaddedGrid |>
+                            rotateCW
+                SlideUp -> rotateCW repaddedGrid |>
+                            rotateCW |>
+                            rotateCW
+                SlideDown -> rotateCW repaddedGrid
+                None -> model.grid
+        temp0 = Debug.watch "firstRotation" firstRotation
+        temp1 = Debug.watch "slidGridResults" slidGridResults
+    in if (Debug.watch "didSlide" didSlide)
+        then spawnSquare { model | grid <- secondRotation }
+        else model
 
 spawnSquare : Model -> Model
 spawnSquare model =
@@ -167,22 +161,23 @@ parseAction {x, y} =
         (0, -1) -> SlideDown
         (_, _) -> None
 
-slideRight : GridRow -> GridRow
+slideRight : GridRow -> (Bool, GridRow)
 slideRight row = 
-    let sliderFun square rowResult = 
-        case (square, head rowResult) of
-            (Nothing, _) -> rowResult
-            (Just sq, Nothing) -> (Just sq) :: rowResult
-            (Just sq, Just lastHd) -> 
-                case lastHd of
-                    Nothing -> (Just sq) :: rowResult
-                    Just lastNum -> 
-                        if sq == lastNum
-                            then Nothing :: ((Just (sq + sq)) :: (withDefault [] (tail rowResult)))
-                            else (Just sq) :: rowResult
-        rowLen = length row
-    in 
-        padLeft rowLen Nothing (foldr sliderFun [] row)
+    let sliderFun : GridSquare -> (GridSquare -> Bool, GridRow) -> (GridSquare -> Bool, GridRow)
+        sliderFun square (checkSlide, rowResult) =
+            case square of
+                Nothing -> (\s -> case s of 
+                                    Nothing -> checkSlide Nothing
+                                    Just sq -> True, rowResult)
+                Just sq -> case withDefault Nothing (head rowResult) of
+                                Nothing -> (\s -> checkSlide square, square :: rowResult)
+                                Just lastHd -> if sq == lastHd
+                                                then (\s -> True, (Just (sq + sq)) :: (withDefault [] (tail rowResult)))
+                                                else (\s -> checkSlide square, square :: rowResult)
+        (checkSlide, slidRow) = foldr sliderFun (\s -> False, []) row
+    in (checkSlide (withDefault Nothing (head row)), 
+        padLeft (length row) Nothing slidRow)
+
 
 padLeft : Int -> a -> List a -> List a
 padLeft len val ls = if length ls >= len
