@@ -117,7 +117,7 @@ spawnSquare model =
                                     Nothing -> False
                                     Just _ -> True)) markEmptyLocs
         numEmptySquares = length emptyLocs
-        (spawnIndex, seed') = Random.generate (Random.int 0 numEmptySquares) model.seed
+        (spawnIndex, seed') = Random.generate (Random.int 0 (numEmptySquares-1)) model.seed
         spawnLoc = withDefault Nothing (get spawnIndex emptyLocs)
         (spawnVal, seed'') = makeSpawnValue seed'
     in case spawnLoc of
@@ -163,20 +163,21 @@ parseAction {x, y} =
 
 slideRight : GridRow -> (Bool, GridRow)
 slideRight row = 
-    let sliderFun : GridSquare -> (GridSquare -> Bool, GridRow) -> (GridSquare -> Bool, GridRow)
+    let sliderFun : GridSquare -> (GridSquare -> Bool, List (Int, Int)) -> (GridSquare -> Bool, List (Int, Int))
         sliderFun square (checkSlide, rowResult) =
             case square of
                 Nothing -> (\s -> case s of 
                                     Nothing -> checkSlide Nothing
                                     Just sq -> True, rowResult)
-                Just sq -> case withDefault Nothing (head rowResult) of
-                                Nothing -> (\s -> checkSlide square, square :: rowResult)
-                                Just lastHd -> if sq == lastHd
-                                                then (\s -> True, (Just (sq + sq)) :: (withDefault [] (tail rowResult)))
-                                                else (\s -> checkSlide square, square :: rowResult)
+                Just sq -> case head rowResult of
+                                Nothing -> (\s -> checkSlide square, (0, sq) :: rowResult)
+                                Just lastHd -> if (sq == snd lastHd) && (0 == fst lastHd)
+                                                then (\s -> True, (sq, sq) :: (withDefault [] (tail rowResult)))
+                                                else (\s -> checkSlide square, (0, sq) :: rowResult)
         (checkSlide, slidRow) = foldr sliderFun (\s -> False, []) row
-    in (checkSlide (withDefault Nothing (head row)), 
-        padLeft (length row) Nothing slidRow)
+        slidResult = map (\p -> Just ((fst p) + (snd p))) slidRow
+    in (checkSlide (withDefault Nothing (head row)),
+        padLeft (length row) Nothing slidResult)
 
 
 padLeft : Int -> a -> List a -> List a
