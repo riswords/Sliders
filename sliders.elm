@@ -2,14 +2,19 @@ module Sliders where
 
 import Debug
 import Signal
-import Html exposing (..)
 import List exposing (..)
 import Keyboard
 import Maybe exposing (withDefault)
 import Random exposing (Seed, initialSeed)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Graphics.Element exposing (show)
+import Graphics.Collage exposing (..)
+import Text exposing (fromString)
+import Color exposing (..)
 
 main : Signal Html
-main = Signal.map view (Signal.foldp update initTestModel Keyboard.arrows)
+main = Signal.map view (Signal.foldp update (spawnSquare init) Keyboard.arrows)
 
 type alias Model = {
     grid : List GridRow
@@ -92,9 +97,7 @@ handleAction action model =
                             rotateCW
                 SlideDown -> rotateCW repaddedGrid
                 None -> model.grid
-        temp0 = Debug.watch "firstRotation" firstRotation
-        temp1 = Debug.watch "slidGridResults" slidGridResults
-    in if (Debug.watch "didSlide" didSlide)
+    in if didSlide
         then spawnSquare { model | grid <- secondRotation }
         else model
 
@@ -207,8 +210,17 @@ gridToTableRows : List GridRow -> List Html
 gridToTableRows grid = 
     let cellView : GridSquare -> List Html
         cellView cell = case cell of
-                            Nothing -> [text "_"]
-                            Just i -> [text (toString i)]
+                            Nothing -> [fromElement (
+                                    collage 30 30 [
+                                        Graphics.Collage.text (fromString "   ")
+                                        , ngon 4 30 |> filled clearGrey
+                                    ]
+                                )]
+                            Just i -> [fromElement (
+                                collage 30 30 [
+                                    Graphics.Collage.text (fromString (toString i))
+                                    , ngon 4 30 |> filled clearGrey
+                                ])]
         
         cellViewData : List (List (List Html))
         cellViewData = map (map cellView) grid
@@ -216,3 +228,7 @@ gridToTableRows grid =
         gridRows : List (List Html)
         gridRows = map (map (td [])) cellViewData
     in map (tr []) gridRows
+
+clearGrey : Color
+clearGrey =
+  rgba 111 111 111 0.6
