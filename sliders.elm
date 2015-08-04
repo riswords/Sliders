@@ -10,11 +10,11 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Graphics.Element exposing (show)
 import Graphics.Collage exposing (..)
-import Text exposing (fromString)
+import Text exposing (fromString, Text, Style)
 import Color exposing (..)
 
 main : Signal Html
-main = Signal.map view (Signal.foldp update (spawnSquare init) Keyboard.arrows)
+main = Signal.map view (Signal.foldp update init Keyboard.arrows)
 
 type alias Model = {
     grid : List GridRow
@@ -32,7 +32,7 @@ type alias Keys = {
     }
 
 init : Model 
-init = {
+init = spawnSquare {
     grid = initGrid 4
     , size = 4
     , seed = initialSeed 0
@@ -51,10 +51,10 @@ initTestModel = {
 
 
 initTestGrid : List GridRow
-initTestGrid = [  [Just 1, Nothing, Nothing, Nothing]
-                , [Nothing, Nothing, Just 2, Nothing]
-                , [Nothing, Nothing, Nothing, Nothing]
-                , [Just 1, Nothing, Nothing, Nothing]
+initTestGrid = [  [Just 2, Just 4, Just 8, Just 16]
+                , [Just 32, Just 64, Just 128, Just 256]
+                , [Just 512, Just 1024, Just 2048, Just 4096]
+                , [Just 8192, Just 16384, Just 32768, Nothing]
                 ]
                 
 -- UPDATE
@@ -203,7 +203,7 @@ rotateCW grid =
 -- VIEW
 view : Model -> Html
 view model = div [] [
-        table [] (gridToTableRows model.grid)
+        table [align "center"] (gridToTableRows model.grid)
     ]
 
 gridToTableRows : List GridRow -> List Html
@@ -211,15 +211,15 @@ gridToTableRows grid =
     let cellView : GridSquare -> List Html
         cellView cell = case cell of
                             Nothing -> [fromElement (
-                                    collage 30 30 [
-                                        Graphics.Collage.text (fromString "   ")
-                                        , ngon 4 30 |> filled clearGrey
+                                    collage 75 75 [
+                                        Graphics.Collage.text (styledText "   ")
+                                        , square 75 |> filled clearGrey
                                     ]
                                 )]
                             Just i -> [fromElement (
-                                collage 30 30 [
-                                    Graphics.Collage.text (fromString (toString i))
-                                    , ngon 4 30 |> filled clearGrey
+                                collage 75 75 [
+                                    square 75 |> filled (getNumberColor i)
+                                    , Graphics.Collage.text (styledText (toString i))
                                 ])]
         
         cellViewData : List (List (List Html))
@@ -229,6 +229,36 @@ gridToTableRows grid =
         gridRows = map (map (td [])) cellViewData
     in map (tr []) gridRows
 
+styledText : String -> Text
+styledText string = Text.style textStyle (fromString string)
+
 clearGrey : Color
 clearGrey =
-  rgba 111 111 111 0.6
+  rgba 200 200 200 0.6
+
+
+cssStyle : Html.Attribute
+cssStyle = style [
+    ("align", "center")
+    ]
+
+textStyle : Text.Style
+textStyle = { 
+    typeface = [ "Helvetica", "sans" ]
+    , height   = Just 24
+    , color    = black
+    , bold     = True
+    , italic   = False
+    , line     = Nothing
+    }
+
+getNumberColor : Int -> Color
+getNumberColor num = 
+    let index = floor (logBase 2 (toFloat num)) - 1
+        colorArray = [
+        rgb 153 255 153, rgb 153 255 255, rgb 255 255 153, rgb 255 153 153
+        , rgb 178 102 255, rgb 255 175 94, rgb 255 102 204, rgb 102 178 255 --rgb 51 153 255
+        , rgb 255 36 58, rgb 0 204 102, rgb 0 128 255, rgb 255 0 127
+        , rgb 255 153 51, rgb 255 0 200, rgb 0 255 0]
+    in withDefault clearGrey (get index colorArray)
+
