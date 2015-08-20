@@ -18,7 +18,6 @@ main = Signal.map view (Signal.foldp update init Keyboard.arrows)
 
 type alias Model = {
     grid : List GridRow
-    , size : Int
     , seed : Seed
     }
 
@@ -34,7 +33,6 @@ type alias Keys = {
 init : Model 
 init = spawnSquare {
     grid = initGrid 4
-    , size = 4
     , seed = initialSeed 0
     }
 
@@ -45,7 +43,6 @@ initGrid size = repeat size (repeat size Nothing)
 initTestModel : Model
 initTestModel = {
     grid = initTestGrid
-    , size = 4
     , seed = initialSeed 0
     }
 
@@ -139,7 +136,10 @@ spawnGridSquare grid row col spawnVal =
 
 makeSpawnValue : Seed -> (Int, Seed)
 makeSpawnValue seed = 
-    let (coinFlip, seed') = Random.generate (Random.int 0 1) seed
+    let (coinFlip0, seed0) = Random.generate (Random.int 0 1) seed
+        (coinFlip, seed') = if coinFlip0 == 0
+                                then (coinFlip0, seed0)
+                                else Random.generate (Random.int 0 1) seed0
     in ((coinFlip * 2) + 2, seed')
 
 get : Int -> List a -> Maybe a
