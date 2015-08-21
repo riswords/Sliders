@@ -19,6 +19,7 @@ main = Signal.map view (Signal.foldp update init Keyboard.arrows)
 type alias Model = {
     grid : List GridRow
     , seed : Seed
+    , gameInProgress : Bool
     }
 
 type alias GridRow = List GridSquare
@@ -34,6 +35,7 @@ init : Model
 init = spawnSquare {
     grid = initGrid 4
     , seed = initialSeed 0
+    , gameInProgress = True
     }
 
 initGrid : Int -> List GridRow
@@ -44,6 +46,7 @@ initTestModel : Model
 initTestModel = {
     grid = initTestGrid
     , seed = initialSeed 0
+    , gameInProgress = True
     }
 
 
@@ -61,6 +64,7 @@ type Action =
     | SlideUp
     | SlideDown
     | None
+    | NewGame
 
 
 update : Keys -> Model -> Model
@@ -68,7 +72,12 @@ update keys model = handleAction (parseAction keys) model
 
 handleAction : Action -> Model -> Model
 handleAction action model =
-    let firstRotation = 
+    let canSlide = canSlideAtAll model.grid
+    in if not canSlide
+      then { model | gameInProgress <- False }
+      else
+      let
+        firstRotation =
             case action of
                 SlideRight -> model.grid
                 SlideLeft -> rotateCW model.grid |>
@@ -78,10 +87,12 @@ handleAction action model =
                             rotateCW |>
                             rotateCW
                 None -> model.grid
+                NewGame -> initGrid (length model.grid)
         slidGridResults = map slideRight firstRotation
         didSlide =
             case action of 
                 None -> False
+                NewGame -> True
                 _ -> any fst slidGridResults
         repaddedGrid = map snd slidGridResults
         secondRotation = 
@@ -93,10 +104,31 @@ handleAction action model =
                             rotateCW |>
                             rotateCW
                 SlideDown -> rotateCW repaddedGrid
-                None -> model.grid
+                _-> model.grid
     in if didSlide
         then spawnSquare { model | grid <- secondRotation }
         else model
+
+canSlideAtAll : List GridRow -> Bool
+canSlideAtAll grid
+    =  any ((==) True) (map rowWithOpenSquare grid)
+    || any ((==) True) (map rowWithPairs grid)
+    || any ((==) True) (map rowWithPairs (rotateCW grid))
+
+rowWithOpenSquare : GridRow -> Bool
+rowWithOpenSquare row = any ((==) True) <| map ((==) Nothing) row
+
+rowWithPairs : GridRow -> Bool
+rowWithPairs row =
+    let foldFun : GridSquare -> (GridSquare, Bool) -> (GridSquare, Bool)
+        foldFun cell (leftCell, foundMatch) =
+            case (leftCell, foundMatch) of
+                (_, True) -> (cell, True)
+                (Nothing, False) -> (cell, False)
+                (Just lval, False) -> case cell of
+                                        Nothing -> (cell, False)
+                                        Just val -> (cell, val == lval)
+    in snd <| foldl foldFun (Nothing, False) row
 
 spawnSquare : Model -> Model
 spawnSquare model =
@@ -166,17 +198,25 @@ parseAction {x, y} =
 
 slideRight : GridRow -> (Bool, GridRow)
 slideRight row = 
-    let sliderFun : GridSquare -> (GridSquare -> Bool, List (Int, Int)) -> (GridSquare -> Bool, List (Int, Int))
+    let sliderFun : GridSquare -> (GridSquare -> Bool, List (Int, Int))
+                -> (GridSquare -> Bool, List (Int, Int))
         sliderFun square (checkSlide, rowResult) =
             case square of
-                Nothing -> (\s -> case s of 
-                                    Nothing -> checkSlide Nothing
-                                    Just sq -> True, rowResult)
-                Just sq -> case head rowResult of
-                                Nothing -> (\s -> checkSlide square, (0, sq) :: rowResult)
-                                Just lastHd -> if (sq == snd lastHd) && (0 == fst lastHd)
-                                                then (\s -> True, (sq, sq) :: (withDefault [] (tail rowResult)))
-                                                else (\s -> checkSlide square, (0, sq) :: rowResult)
+                Nothing ->
+                    (\s -> case s of
+                             Nothing -> checkSlide Nothing
+                             Just sq -> True, rowResult)
+                Just sq ->
+                    case head rowResult of
+                      Nothing -> (\s -> checkSlide square,
+                                        (0, sq) :: rowResult)
+                      Just lastHd ->
+                          if (sq == snd lastHd) && (0 == fst lastHd)
+                          then (\s -> True,
+                                      (sq, sq) ::
+                                        (withDefault [] (tail rowResult)))
+                          else (\s -> checkSlide square,
+                                      (0, sq) :: rowResult)
         (checkSlide, slidRow) = foldr sliderFun (\s -> False, []) row
         slidResult = map (\p -> Just ((fst p) + (snd p))) slidRow
     in (checkSlide (withDefault Nothing (head row)),
@@ -203,7 +243,8 @@ rotateCW grid =
 -- VIEW
 view : Model -> Html
 view model = div [] [
-        table [align "center"] (gridToTableRows model.grid)
+        Html.text (toString (model.gameInProgress))
+        , table [align "center"] (gridToTableRows model.grid)
     ]
 
 gridToTableRows : List GridRow -> List Html
