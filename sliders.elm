@@ -243,25 +243,31 @@ rotateCW grid =
 -- VIEW
 view : Model -> Html
 view model = div [] [
-        Html.text (toString (model.gameInProgress))
+        makeGameOverHtml model.gameInProgress
         , table [align "center"] (gridToTableRows model.grid)
     ]
+
+makeGameOverHtml : Bool -> Html
+makeGameOverHtml gameInProgress = 
+    if gameInProgress
+    then Html.text ""
+    else Html.text "Game Over!"
 
 gridToTableRows : List GridRow -> List Html
 gridToTableRows grid = 
     let cellView : GridSquare -> List Html
-        cellView cell = case cell of
-                            Nothing -> [fromElement (
-                                    collage 75 75 [
-                                        Graphics.Collage.text (styledText "   ")
-                                        , square 75 |> filled clearGrey
-                                    ]
-                                )]
-                            Just i -> [fromElement (
-                                collage 75 75 [
-                                    square 75 |> filled (getNumberColor i)
-                                    , Graphics.Collage.text (styledText (toString i))
-                                ])]
+        cellView cell = 
+            case cell of
+              Nothing -> [fromElement (
+                             collage 75 75 [
+                               Graphics.Collage.text (styledText "   ")
+                           , square 75 |> filled clearGrey ]
+                          )]
+              Just i -> [fromElement (
+                            collage 75 75 [
+                              square 75 |> filled (getNumberColor i)
+                            , Graphics.Collage.text (styledText (toString i))
+                         ])]
         
         cellViewData : List (List (List Html))
         cellViewData = map (map cellView) grid
@@ -298,7 +304,7 @@ getNumberColor num =
     let index = floor (logBase 2 (toFloat num)) - 1
         colorArray = [
         rgb 153 255 153, rgb 153 255 255, rgb 255 255 153, rgb 255 153 153
-        , rgb 178 102 255, rgb 255 175 94, rgb 255 102 204, rgb 102 178 255 --rgb 51 153 255
+        , rgb 178 102 255, rgb 255 175 94, rgb 255 102 204, rgb 102 178 255
         , rgb 255 36 58, rgb 0 204 102, rgb 0 128 255, rgb 255 0 127
         , rgb 255 153 51, rgb 255 0 200, rgb 0 255 0]
     in withDefault clearGrey (get index colorArray)

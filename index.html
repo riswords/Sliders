@@ -13211,6 +13211,9 @@ Elm.Sliders.make = function (_elm) {
       textStyle,
       $Text.fromString(string));
    };
+   var makeGameOverHtml = function (gameInProgress) {
+      return gameInProgress ? $Html.text("") : $Html.text("Game Over!");
+   };
    var rotateCW = function (grid) {
       return function () {
          var tls = A2($List.map,
@@ -13427,7 +13430,7 @@ Elm.Sliders.make = function (_elm) {
                     _L.fromArray([$Graphics$Collage.text(styledText("   "))
                                  ,$Graphics$Collage.filled(clearGrey)($Graphics$Collage.square(75))])))]);}
                _U.badCase($moduleName,
-               "between lines 253 and 266");
+               "between lines 260 and 272");
             }();
          };
          var cellViewData = A2($List.map,
@@ -13444,7 +13447,7 @@ Elm.Sliders.make = function (_elm) {
    var view = function (model) {
       return A2($Html.div,
       _L.fromArray([]),
-      _L.fromArray([$Html.text($Basics.toString(model.gameInProgress))
+      _L.fromArray([makeGameOverHtml(model.gameInProgress)
                    ,A2($Html.table,
                    _L.fromArray([$Html$Attributes.align("center")]),
                    gridToTableRows(model.grid))]));
@@ -13815,6 +13818,7 @@ Elm.Sliders.make = function (_elm) {
                          ,padLeft: padLeft
                          ,rotateCW: rotateCW
                          ,view: view
+                         ,makeGameOverHtml: makeGameOverHtml
                          ,gridToTableRows: gridToTableRows
                          ,styledText: styledText
                          ,clearGrey: clearGrey
